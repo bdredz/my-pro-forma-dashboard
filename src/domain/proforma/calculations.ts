@@ -113,10 +113,25 @@ export function autoFillInterestPayments(
 ): Pick<ProformaInput, 'payment1' | 'payment2' | 'payment3' | 'payment4' | 'payment5' | 'payment6'> {
     const interestRateDecimal = input.interestRate / 100;
 
-    // Rough estimate of loan base - includes sitePrep
+    // Rough estimate of loan base - includes sitePrep and Extra Expenses (aligning with main loanBase)
     const qty = input.howManyBuild;
     const estimatedBuildCost = qty * input.proposedSqFt * input.buildCostPerSqFt;
-    const estimatedLoanBase = estimatedBuildCost + input.costOfLand + input.sitePrep + input.estimatedClosingCost;
+
+    // Calculate extra expenses total for the estimate
+    const extraExpensesTotal =
+        input.sidewalks +
+        input.sewer +
+        input.water +
+        input.rePlatt +
+        input.grinderPumps +
+        input.builderFee;
+
+    const estimatedLoanBase =
+        estimatedBuildCost +
+        input.costOfLand +
+        input.sitePrep +
+        input.estimatedClosingCost +
+        extraExpensesTotal;
 
     // Simple interest approximation over 6 months
     // Assume average balance is ~75% of loan base (draws increase over time)

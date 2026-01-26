@@ -60,6 +60,26 @@ function App() {
     // Update browser URL first
     window.history.replaceState({}, '', url);
 
+    // Try Web Share API (Mobile/Tablet/Safari)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: "Perfect Picture Home's Proforma",
+          text: 'Check out this proforma deal analysis:',
+          url: url,
+        });
+        return; // Success, don't fallback to copy
+      } catch (err) {
+        // If user aborted/cancelled, just return (don't force copy)
+        if (err instanceof Error && err.name === 'AbortError') {
+          return;
+        }
+        // Otherwise keep going to fallback
+        console.warn('Share API failed, falling back to clipboard:', err);
+      }
+    }
+
+    // Fallback: Clipboard Copy
     try {
       await navigator.clipboard.writeText(url);
       setShowToast(true);
