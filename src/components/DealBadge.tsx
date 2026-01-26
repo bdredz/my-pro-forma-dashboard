@@ -1,6 +1,6 @@
 
 export interface DealBadgeProps {
-    badge: 'Great' | 'Borderline' | 'Pass';
+    badge: 'Great' | 'Good' | 'NO Deal';
     profitPercentage: number;
 }
 
@@ -11,18 +11,18 @@ export function DealBadge({ badge, profitPercentage }: DealBadgeProps) {
     const badgeConfig = {
         Great: {
             className: 'badge-great',
-            label: '✓ Great Deal',
-            color: '#2D8CFF', // Zoom blue
+            label: '🚀 Great Deal',
+            color: '#10B981', // Green
         },
-        Borderline: {
-            className: 'badge-borderline',
-            label: '~ Borderline',
-            color: '#6B7280', // Neutral gray
+        Good: {
+            className: 'badge-good',
+            label: '✅ Good Deal',
+            color: '#F59E0B', // Yellow/amber
         },
-        Pass: {
-            className: 'badge-pass',
-            label: '✗ Pass',
-            color: '#9CA3AF', // Muted gray
+        'NO Deal': {
+            className: 'badge-no-deal',
+            label: '👎 NO Deal',
+            color: '#EF4444', // Red
         },
     };
 
@@ -32,7 +32,7 @@ export function DealBadge({ badge, profitPercentage }: DealBadgeProps) {
         <div className={`deal-badge ${config.className}`}>
             <span className="badge-label">{config.label}</span>
             <span className="badge-percentage">
-                {profitPercentage === 0 && badge === 'Pass' ? '—' : `${(profitPercentage * 100).toFixed(1)}%`}
+                {profitPercentage === 0 && badge === 'NO Deal' ? '—' : `${(profitPercentage * 100).toFixed(1)}%`}
             </span>
         </div>
     );

@@ -28,10 +28,11 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     // Calculate total build cost
     const totalBuildCost = qty * input.proposedSqFt * input.buildCostPerSqFt;
 
-    // Calculate loan base (for points calculation)
+    // Calculate loan base (for points calculation) - includes sitePrep
     const loanBase =
         totalBuildCost +
         input.costOfLand +
+        input.sitePrep +
         input.estimatedClosingCost +
         extraExpensesTotal;
 
@@ -50,11 +51,12 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     // Calculate real estate commission
     const realEstateCommissionAmount = arv * commissionRateDecimal;
 
-    // Calculate total profit
+    // Calculate total profit - includes sitePrep as a cost
     const totalProfit =
         arv -
         totalBuildCost -
         input.costOfLand -
+        input.sitePrep - // Added sitePrep here
         input.estimatedClosingCost -
         extraExpensesTotal -
         totalPoints -
@@ -66,13 +68,14 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     const profitPercentage = arv > 0 ? totalProfit / arv : 0;
 
     // Determine deal badge based on profit percentage thresholds
-    let dealBadge: 'Great' | 'Borderline' | 'Pass';
-    if (profitPercentage >= 0.25) {
+    // Great: >= 21%, Good: 15-20.99%, NO Deal: < 15%
+    let dealBadge: 'Great' | 'Good' | 'NO Deal';
+    if (profitPercentage >= 0.21) {
         dealBadge = 'Great';
     } else if (profitPercentage >= 0.15) {
-        dealBadge = 'Borderline';
+        dealBadge = 'Good';
     } else {
-        dealBadge = 'Pass';
+        dealBadge = 'NO Deal';
     }
 
     return {
@@ -110,10 +113,10 @@ export function autoFillInterestPayments(
 ): Pick<ProformaInput, 'payment1' | 'payment2' | 'payment3' | 'payment4' | 'payment5' | 'payment6'> {
     const interestRateDecimal = input.interestRate / 100;
 
-    // Rough estimate of loan base
+    // Rough estimate of loan base - includes sitePrep
     const qty = input.howManyBuild;
     const estimatedBuildCost = qty * input.proposedSqFt * input.buildCostPerSqFt;
-    const estimatedLoanBase = estimatedBuildCost + input.costOfLand + input.estimatedClosingCost;
+    const estimatedLoanBase = estimatedBuildCost + input.costOfLand + input.sitePrep + input.estimatedClosingCost;
 
     // Simple interest approximation over 6 months
     // Assume average balance is ~75% of loan base (draws increase over time)

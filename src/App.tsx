@@ -6,6 +6,7 @@ import {
   getBlankProformaInput,
   autoFillInterestPayments,
 } from './domain/proforma';
+import { generateShareUrl, parseProformaFromQuery } from './utils/urlSharing';
 import { formatCurrency, formatPercent } from './utils/formatting';
 import { NumberField } from './components/NumberField';
 import { DealBadge } from './components/DealBadge';
@@ -13,8 +14,17 @@ import { KpiCard } from './components/KpiCard';
 import './App.css';
 
 function App() {
-  // Initialize with example data for "instant wow"
-  const [input, setInput] = useState<ProformaInput>(getExampleProformaInput());
+  // Initialize state - check URL first, otherwise use example
+  const [input, setInput] = useState<ProformaInput>(() => {
+    // Check if we have query params
+    const searchParams = new URLSearchParams(window.location.search);
+    if (searchParams.toString()) {
+      return parseProformaFromQuery(searchParams);
+    }
+    return getExampleProformaInput();
+  });
+
+  const [showToast, setShowToast] = useState(false);
 
   // Calculate derived values
   const derived = useMemo(() => calculateProforma(input), [input]);
@@ -27,11 +37,14 @@ function App() {
   // Reset to example defaults
   const handleReset = () => {
     setInput(getExampleProformaInput());
+    // Optional: clear URL params on reset
+    window.history.replaceState({}, '', window.location.pathname);
   };
 
   // Start fresh (blank)
   const handleStartFresh = () => {
     setInput(getBlankProformaInput());
+    window.history.replaceState({}, '', window.location.pathname);
   };
 
   // Auto-fill interest payments
@@ -40,15 +53,43 @@ function App() {
     setInput((prev) => ({ ...prev, ...payments }));
   };
 
+  // Handle Share functionality
+  const handleShare = async () => {
+    const url = generateShareUrl(input);
+
+    // Update browser URL first
+    window.history.replaceState({}, '', url);
+
+    try {
+      await navigator.clipboard.writeText(url);
+      setShowToast(true);
+      setTimeout(() => setShowToast(false), 3000);
+    } catch (err) {
+      // Fallback: mostly for dev/unsecure contexts, but decent UX
+      console.error('Failed to copy: ', err);
+      prompt('Copy this link to share:', url);
+    }
+  };
+
   return (
     <div className="app">
+      {/* Simple Toast Notification */}
+      {showToast && (
+        <div className="toast-notification">
+          Link copied to clipboard!
+        </div>
+      )}
+
       <header className="app-header">
-        <h1>Proforma Dashboard</h1>
+        <h1>Perfect Picture Home's Proforma</h1>
         <div className="header-actions">
-          <button onClick={handleStartFresh} className="btn btn-secondary">
+          <button onClick={handleShare} className="btn btn-primary share-btn">
+            <span style={{ marginRight: '6px' }}>🔗</span> Share
+          </button>
+          <button onClick={handleStartFresh} className="btn btn-neutral">
             Start Fresh
           </button>
-          <button onClick={handleReset} className="btn btn-primary">
+          <button onClick={handleReset} className="btn btn-outline">
             Reset to Example
           </button>
         </div>
@@ -134,6 +175,12 @@ function App() {
                 onChange={(v) => updateField('costOfLand', v)}
                 type="currency"
                 required
+              />
+              <NumberField
+                label="Site Prep"
+                value={input.sitePrep}
+                onChange={(v) => updateField('sitePrep', v)}
+                type="currency"
               />
               <NumberField
                 label="Estimated Closing Cost"
@@ -312,6 +359,10 @@ function App() {
                 <span>{formatCurrency(input.costOfLand)}</span>
               </div>
               <div className="breakdown-item">
+                <span>Site Prep</span>
+                <span>{formatCurrency(input.sitePrep)}</span>
+              </div>
+              <div className="breakdown-item">
                 <span>Closing Cost</span>
                 <span>{formatCurrency(input.estimatedClosingCost)}</span>
               </div>
@@ -337,6 +388,7 @@ function App() {
                   {formatCurrency(
                     derived.totalBuildCost +
                     input.costOfLand +
+                    input.sitePrep +
                     input.estimatedClosingCost +
                     derived.extraExpensesTotal +
                     derived.totalPoints +

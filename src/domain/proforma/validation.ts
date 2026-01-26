@@ -36,6 +36,7 @@ export const ProformaInputSchema = z.object({
     buildCostPerSqFt: z.number().min(0).default(0),
     salePricePerSqFt: z.number().min(0).default(0),
     costOfLand: z.number().min(0).default(0),
+    sitePrep: z.number().min(0).default(0),
     estimatedClosingCost: z.number().min(0).default(0),
     realEstateCommissionRate: z.number().min(0).max(100).default(0),
     interestRate: z.number().min(0).max(100).default(0),
@@ -95,9 +96,10 @@ export function getExampleProformaInput(): ProformaInput {
         buildCostPerSqFt: 205.00,
         salePricePerSqFt: 361.00,
         costOfLand: 330000.00,
+        sitePrep: 0,
         estimatedClosingCost: 7000.00,
         realEstateCommissionRate: 6.00,
-        interestRate: 13.00,
+        interestRate: 11.00,
         loanPointsRate: 1.50,
 
         // Extra expenses (all 0 by default)

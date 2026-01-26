@@ -21,7 +21,7 @@ describe('calculateProforma', () => {
         // Extra Expenses Total = 0 (all zeros in example)
         expect(result.extraExpensesTotal).toBe(0);
 
-        // Loan Base = 1,107,000 + 330,000 + 7,000 + 0 = 1,444,000
+        // Loan Base = 1,107,000 + 330,000 + 0 (sitePrep) + 7,000 + 0 = 1,444,000
         expect(result.loanBase).toBe(1444000);
 
         // Total Points = 1,444,000 * 0.015 = 21,660
@@ -41,8 +41,8 @@ describe('calculateProforma', () => {
         // Profit Percentage = 292,104 / 1,949,400 ≈ 0.1498 ≈ 14.98%
         expect(result.profitPercentage).toBeCloseTo(0.1498, 3);
 
-        // Deal Badge = Pass (profit% < 15%)
-        expect(result.dealBadge).toBe('Pass');
+        // Deal Badge = NO Deal (profit% < 15%)
+        expect(result.dealBadge).toBe('NO Deal');
     });
 
     it('handles zero ARV gracefully', () => {
@@ -53,7 +53,7 @@ describe('calculateProforma', () => {
 
         expect(result.arv).toBe(0);
         expect(result.profitPercentage).toBe(0);
-        expect(result.dealBadge).toBe('Pass');
+        expect(result.dealBadge).toBe('NO Deal');
     });
 
     it('classifies Great deal correctly', () => {
@@ -70,12 +70,12 @@ describe('calculateProforma', () => {
 
         const result = calculateProforma(input);
 
-        // With reduced costs, profit percentage should be ≥ 25%
-        expect(result.profitPercentage).toBeGreaterThanOrEqual(0.25);
+        // With reduced costs, profit percentage should be >= 21%
+        expect(result.profitPercentage).toBeGreaterThanOrEqual(0.21);
         expect(result.dealBadge).toBe('Great');
     });
 
-    it('classifies Pass deal correctly', () => {
+    it('classifies NO Deal correctly', () => {
         const input = getExampleProformaInput();
         // Increase costs to create a bad deal
         input.costOfLand = 800000;
@@ -85,7 +85,27 @@ describe('calculateProforma', () => {
 
         // With increased costs, profit percentage should be < 15%
         expect(result.profitPercentage).toBeLessThan(0.15);
-        expect(result.dealBadge).toBe('Pass');
+        expect(result.dealBadge).toBe('NO Deal');
+    });
+
+    it('classifies Good deal correctly', () => {
+        const input = getExampleProformaInput();
+        // Adjust to create a good deal (15-20.99%)
+        input.costOfLand = 480000;
+        input.buildCostPerSqFt = 180;
+        input.payment1 = 3000;
+        input.payment2 = 3000;
+        input.payment3 = 3000;
+        input.payment4 = 3000;
+        input.payment5 = 3000;
+        input.payment6 = 3000;
+
+        const result = calculateProforma(input);
+
+        // Profit percentage should be between 15% and 21%
+        expect(result.profitPercentage).toBeGreaterThanOrEqual(0.15);
+        expect(result.profitPercentage).toBeLessThan(0.21);
+        expect(result.dealBadge).toBe('Good');
     });
 
     it('sums interest payments correctly', () => {
@@ -114,5 +134,25 @@ describe('calculateProforma', () => {
         const result = calculateProforma(input);
 
         expect(result.extraExpensesTotal).toBe(21000);
+    });
+
+    it('includes sitePrep in calculations', () => {
+        const input = getExampleProformaInput();
+        const sitePrepCost = 10000;
+        input.sitePrep = sitePrepCost;
+
+        const result = calculateProforma(input);
+
+        // sitePrep should be included in loan base
+        // Original loan base: 1,444,000, with sitePrep: 1,454,000
+        expect(result.loanBase).toBe(1444000 + sitePrepCost);
+
+        // Total points should increase
+        const expectedPointsIncrease = sitePrepCost * (input.loanPointsRate / 100);
+        expect(result.totalPoints).toBe(21660 + expectedPointsIncrease);
+
+        // Total profit should decrease by sitePrep + points on sitePrep
+        const expectedProfitDecrease = sitePrepCost + expectedPointsIncrease;
+        expect(result.totalProfit).toBeCloseTo(292104 - expectedProfitDecrease, 0);
     });
 });

@@ -10,8 +10,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Proforma Dashboard',
-        short_name: 'Proforma',
+        name: "Perfect Picture Home's Proforma",
+        short_name: 'PPH Proforma',
         description: 'Home Builder Deal Assessment Calculator',
         theme_color: '#2D8CFF',
         background_color: '#ffffff',
