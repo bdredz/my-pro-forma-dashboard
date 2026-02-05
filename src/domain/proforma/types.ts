@@ -73,8 +73,7 @@ export interface ProformaDerived {
     effectiveSalePricePerSqFt: number; // The actual price/sqft used (calculated or entered)
     arv: number; // After Repair Value
     totalBuildCost: number;
-    sitePrepTotal: number; // Sum of all site prep line items
-    extraExpensesTotal: number;
+    sitePrepAndExtrasTotal: number; // Combined total of site prep costs + extra expenses
     effectiveClosingCost: number; // The actual closing cost used (auto or manual)
     loanBase: number; // Base amount for calculating loan points
     totalPoints: number; // Loan points cost

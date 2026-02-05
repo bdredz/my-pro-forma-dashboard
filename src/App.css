@@ -647,6 +647,20 @@ body {
   margin-top: var(--spacing-lg);
 }
 
+/* Subsection titles within collapsible sections */
+.subsection-title {
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: var(--spacing-lg) 0 var(--spacing-md) 0;
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.subsection-title:first-of-type {
+  margin-top: var(--spacing-md);
+}
+
 /* === PRICING MODE TOGGLE === */
 .pricing-mode-section {
   display: flex;

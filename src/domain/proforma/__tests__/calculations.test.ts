@@ -18,8 +18,8 @@ describe('calculateProforma', () => {
         // Total Build Cost = 3 * 1800 * 205 = 1,107,000
         expect(result.totalBuildCost).toBe(1107000);
 
-        // Extra Expenses Total = 0 (all zeros in example)
-        expect(result.extraExpensesTotal).toBe(0);
+        // Site Prep and Extras Total = 0 (all zeros in example)
+        expect(result.sitePrepAndExtrasTotal).toBe(0);
 
         // Loan Base = 1,107,000 + 330,000 + 0 (sitePrep) + 7,000 + 0 = 1,444,000
         expect(result.loanBase).toBe(1444000);
@@ -122,7 +122,7 @@ describe('calculateProforma', () => {
         expect(result.totalInterestPayments).toBe(21000);
     });
 
-    it('sums extra expenses correctly', () => {
+    it('sums extra expenses correctly (combined with site prep)', () => {
         const input = getExampleProformaInput();
         input.sidewalks = 1000;
         // Note: sewer and water moved to sitePrepCosts.sewerWaterTap
@@ -132,8 +132,8 @@ describe('calculateProforma', () => {
 
         const result = calculateProforma(input);
 
-        // Extra expenses now only has 4 fields (sewer/water moved to sitePrepCosts)
-        expect(result.extraExpensesTotal).toBe(16000);
+        // Extra expenses (16000) combined with site prep (0) = 16000
+        expect(result.sitePrepAndExtrasTotal).toBe(16000);
     });
 
     it('includes sitePrepCosts in calculations', () => {
@@ -144,28 +144,33 @@ describe('calculateProforma', () => {
 
         const result = calculateProforma(input);
 
-        // sitePrepTotal should be included in loan base
-        // Original loan base: 1,444,000, with sitePrepTotal: 1,454,000
+        // sitePrepAndExtrasTotal should be included in loan base
+        // Original loan base: 1,444,000, with sitePrepAndExtrasTotal: 1,454,000
         expect(result.loanBase).toBe(1444000 + sitePrepCost);
 
         // Total points should increase
         const expectedPointsIncrease = sitePrepCost * (input.loanPointsRate / 100);
         expect(result.totalPoints).toBe(21660 + expectedPointsIncrease);
 
-        // Total profit should decrease by sitePrepTotal + points on sitePrepTotal
+        // Total profit should decrease by sitePrepAndExtrasTotal + points on it
         const expectedProfitDecrease = sitePrepCost + expectedPointsIncrease;
         expect(result.totalProfit).toBeCloseTo(292104 - expectedProfitDecrease, 0);
     });
 
-    it('sums all site prep costs correctly', () => {
+    it('sums all site prep and extra expenses correctly', () => {
         const input = getExampleProformaInput();
+        // Site prep costs
         input.sitePrepCosts.surveyAndPermits = 1000;
         input.sitePrepCosts.houseDemolitionDebris = 2000;
         input.sitePrepCosts.clearingGrading = 3000;
         input.sitePrepCosts.sewerWaterTap = 4000;
+        // Extra expenses
+        input.sidewalks = 500;
+        input.rePlatt = 500;
 
         const result = calculateProforma(input);
 
-        expect(result.sitePrepTotal).toBe(10000);
+        // Site prep (10000) + extra expenses (1000) = 11000
+        expect(result.sitePrepAndExtrasTotal).toBe(11000);
     });
 });

@@ -55,9 +55,28 @@ export function getEffectiveSalePricePerSqFt(input: ProformaInput): number {
 }
 
 /**
+ * Calculate extra expenses total (4 fields)
+ */
+export function calculateExtraExpensesTotal(input: ProformaInput): number {
+    return (
+        input.sidewalks +
+        input.rePlatt +
+        input.grinderPumps +
+        input.builderFee
+    );
+}
+
+/**
+ * Calculate combined site prep and extra expenses total
+ */
+export function calculateSitePrepAndExtrasTotal(input: ProformaInput): number {
+    return calculateSitePrepTotal(input.sitePrepCosts) + calculateExtraExpensesTotal(input);
+}
+
+/**
  * Pure calculation engine for proforma analysis
  * Implements the exact formulas from the spreadsheet
- * 
+ *
  * @param input - Validated ProformaInput
  * @returns ProformaDerived with all calculated values
  */
@@ -67,15 +86,8 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     const commissionRateDecimal = input.realEstateCommissionRate / 100;
     const loanPointsRateDecimal = input.loanPointsRate / 100;
 
-    // Calculate site prep total from breakdown
-    const sitePrepTotal = calculateSitePrepTotal(input.sitePrepCosts);
-
-    // Calculate extra expenses total (sewer/water moved to sitePrepCosts)
-    const extraExpensesTotal =
-        input.sidewalks +
-        input.rePlatt +
-        input.grinderPumps +
-        input.builderFee;
+    // Calculate combined site prep and extra expenses total
+    const sitePrepAndExtrasTotal = calculateSitePrepAndExtrasTotal(input);
 
     // Get effective sale price per sq ft based on pricing mode
     const effectiveSalePricePerSqFt = getEffectiveSalePricePerSqFt(input);
@@ -89,13 +101,12 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     // Get effective closing cost (auto-calculated or manual)
     const effectiveClosingCost = getEffectiveClosingCost(input);
 
-    // Calculate loan base (for points calculation) - includes sitePrepTotal
+    // Calculate loan base (for points calculation) - includes sitePrepAndExtrasTotal
     const loanBase =
         totalBuildCost +
         input.costOfLand +
-        sitePrepTotal +
-        effectiveClosingCost +
-        extraExpensesTotal;
+        sitePrepAndExtrasTotal +
+        effectiveClosingCost;
 
     // Calculate total points
     const totalPoints = loanBase * loanPointsRateDecimal;
@@ -112,14 +123,13 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     // Calculate real estate commission
     const realEstateCommissionAmount = arv * commissionRateDecimal;
 
-    // Calculate total profit - includes sitePrepTotal as a cost
+    // Calculate total profit - includes sitePrepAndExtrasTotal as a cost
     const totalProfit =
         arv -
         totalBuildCost -
         input.costOfLand -
-        sitePrepTotal -
+        sitePrepAndExtrasTotal -
         effectiveClosingCost -
-        extraExpensesTotal -
         totalPoints -
         totalInterestPayments -
         realEstateCommissionAmount;
@@ -143,8 +153,7 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
         effectiveSalePricePerSqFt,
         arv,
         totalBuildCost,
-        sitePrepTotal,
-        extraExpensesTotal,
+        sitePrepAndExtrasTotal,
         effectiveClosingCost,
         loanBase,
         totalPoints,
@@ -177,26 +186,18 @@ export function autoFillInterestPayments(
 ): Pick<ProformaInput, 'payment1' | 'payment2' | 'payment3' | 'payment4' | 'payment5' | 'payment6'> {
     const interestRateDecimal = input.interestRate / 100;
 
-    // Rough estimate of loan base - includes sitePrep and Extra Expenses (aligning with main loanBase)
+    // Rough estimate of loan base - includes sitePrepAndExtrasTotal (aligning with main loanBase)
     const qty = input.howManyBuild;
     const estimatedBuildCost = qty * input.proposedSqFt * input.buildCostPerSqFt;
 
-    // Calculate site prep total for the estimate
-    const sitePrepTotal = calculateSitePrepTotal(input.sitePrepCosts);
-
-    // Calculate extra expenses total for the estimate (sewer/water moved to sitePrepCosts)
-    const extraExpensesTotal =
-        input.sidewalks +
-        input.rePlatt +
-        input.grinderPumps +
-        input.builderFee;
+    // Calculate combined site prep and extra expenses total for the estimate
+    const sitePrepAndExtrasTotal = calculateSitePrepAndExtrasTotal(input);
 
     const estimatedLoanBase =
         estimatedBuildCost +
         input.costOfLand +
-        sitePrepTotal +
-        input.estimatedClosingCost +
-        extraExpensesTotal;
+        sitePrepAndExtrasTotal +
+        input.estimatedClosingCost;
 
     // Simple interest approximation over 6 months
     // Assume average balance is ~75% of loan base (draws increase over time)

@@ -334,24 +334,76 @@ function App() {
             </div>
           </section>
 
-          {/* Site Prep Section - Collapsible */}
+          <section className="card">
+            <div className="section-header">
+              <h2>Interest Payments</h2>
+              <button onClick={handleAutoFillInterest} className="btn btn-sm btn-secondary">
+                Auto-fill from Rate
+              </button>
+            </div>
+            <div className="form-grid">
+              <NumberField
+                label="Payment 1"
+                value={input.payment1}
+                onChange={(v) => updateField('payment1', v)}
+                type="currency"
+              />
+              <NumberField
+                label="Payment 2"
+                value={input.payment2}
+                onChange={(v) => updateField('payment2', v)}
+                type="currency"
+              />
+              <NumberField
+                label="Payment 3"
+                value={input.payment3}
+                onChange={(v) => updateField('payment3', v)}
+                type="currency"
+              />
+              <NumberField
+                label="Payment 4"
+                value={input.payment4}
+                onChange={(v) => updateField('payment4', v)}
+                type="currency"
+              />
+              <NumberField
+                label="Payment 5"
+                value={input.payment5}
+                onChange={(v) => updateField('payment5', v)}
+                type="currency"
+              />
+              <NumberField
+                label="Payment 6"
+                value={input.payment6}
+                onChange={(v) => updateField('payment6', v)}
+                type="currency"
+              />
+            </div>
+            <div className="total-line">
+              <span>Total Interest Payments:</span>
+              <strong>{formatCurrency(derived.totalInterestPayments)}</strong>
+            </div>
+          </section>
+
+          {/* Site Prep and Extra Expenses Section - Collapsible */}
           <section className="card">
             <div
               className="section-header collapsible-header"
               onClick={() => setIsSitePrepExpanded(!isSitePrepExpanded)}
             >
               <h2>
-                Site Prep
+                Site Prep and Extra Expenses
                 <span className="collapse-icon">{isSitePrepExpanded ? '−' : '+'}</span>
               </h2>
               {!isSitePrepExpanded && (
                 <span className="collapsed-total">
-                  Total: {formatCurrency(derived.sitePrepTotal)}
+                  Total: {formatCurrency(derived.sitePrepAndExtrasTotal)}
                 </span>
               )}
             </div>
             {isSitePrepExpanded && (
               <>
+                <h3 className="subsection-title">Site Prep</h3>
                 <div className="form-grid">
                   <NumberField
                     label="Survey & Permits"
@@ -420,97 +472,39 @@ function App() {
                     type="currency"
                   />
                 </div>
+                <h3 className="subsection-title">Extra Expenses</h3>
+                <div className="form-grid">
+                  <NumberField
+                    label="Sidewalks"
+                    value={input.sidewalks}
+                    onChange={(v) => updateField('sidewalks', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Re-Platt"
+                    value={input.rePlatt}
+                    onChange={(v) => updateField('rePlatt', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Grinder Pumps"
+                    value={input.grinderPumps}
+                    onChange={(v) => updateField('grinderPumps', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Builder Fee"
+                    value={input.builderFee}
+                    onChange={(v) => updateField('builderFee', v)}
+                    type="currency"
+                  />
+                </div>
                 <div className="total-line">
-                  <span>Site Prep Total:</span>
-                  <strong>{formatCurrency(derived.sitePrepTotal)}</strong>
+                  <span>Total Site Prep and Extra Expenses:</span>
+                  <strong>{formatCurrency(derived.sitePrepAndExtrasTotal)}</strong>
                 </div>
               </>
             )}
-          </section>
-
-          <section className="card">
-            <div className="section-header">
-              <h2>Interest Payments</h2>
-              <button onClick={handleAutoFillInterest} className="btn btn-sm btn-secondary">
-                Auto-fill from Rate
-              </button>
-            </div>
-            <div className="form-grid">
-              <NumberField
-                label="Payment 1"
-                value={input.payment1}
-                onChange={(v) => updateField('payment1', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Payment 2"
-                value={input.payment2}
-                onChange={(v) => updateField('payment2', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Payment 3"
-                value={input.payment3}
-                onChange={(v) => updateField('payment3', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Payment 4"
-                value={input.payment4}
-                onChange={(v) => updateField('payment4', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Payment 5"
-                value={input.payment5}
-                onChange={(v) => updateField('payment5', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Payment 6"
-                value={input.payment6}
-                onChange={(v) => updateField('payment6', v)}
-                type="currency"
-              />
-            </div>
-            <div className="total-line">
-              <span>Total Interest Payments:</span>
-              <strong>{formatCurrency(derived.totalInterestPayments)}</strong>
-            </div>
-          </section>
-
-          <section className="card">
-            <h2>Extra Expenses</h2>
-            <div className="form-grid">
-              <NumberField
-                label="Sidewalks"
-                value={input.sidewalks}
-                onChange={(v) => updateField('sidewalks', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Re-Platt"
-                value={input.rePlatt}
-                onChange={(v) => updateField('rePlatt', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Grinder Pumps"
-                value={input.grinderPumps}
-                onChange={(v) => updateField('grinderPumps', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Builder Fee"
-                value={input.builderFee}
-                onChange={(v) => updateField('builderFee', v)}
-                type="currency"
-              />
-            </div>
-            <div className="total-line">
-              <span>Total Extra Expenses:</span>
-              <strong>{formatCurrency(derived.extraExpensesTotal)}</strong>
-            </div>
           </section>
         </div>
 
@@ -563,16 +557,12 @@ function App() {
                 <span>{formatCurrency(input.costOfLand)}</span>
               </div>
               <div className="breakdown-item">
-                <span>Site Prep</span>
-                <span>{formatCurrency(derived.sitePrepTotal)}</span>
+                <span>Site Prep & Extra Expenses</span>
+                <span>{formatCurrency(derived.sitePrepAndExtrasTotal)}</span>
               </div>
               <div className="breakdown-item">
                 <span>Closing Cost</span>
                 <span>{formatCurrency(derived.effectiveClosingCost)}</span>
-              </div>
-              <div className="breakdown-item">
-                <span>Extra Expenses</span>
-                <span>{formatCurrency(derived.extraExpensesTotal)}</span>
               </div>
               <div className="breakdown-item">
                 <span>Loan Points</span>
@@ -592,9 +582,8 @@ function App() {
                   {formatCurrency(
                     derived.totalBuildCost +
                     input.costOfLand +
-                    derived.sitePrepTotal +
+                    derived.sitePrepAndExtrasTotal +
                     derived.effectiveClosingCost +
-                    derived.extraExpensesTotal +
                     derived.totalPoints +
                     derived.totalInterestPayments +
                     derived.realEstateCommissionAmount
