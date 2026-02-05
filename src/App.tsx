@@ -392,7 +392,7 @@ function App() {
               onClick={() => setIsSitePrepExpanded(!isSitePrepExpanded)}
             >
               <h2>
-                Site Prep and Extra Expenses
+                Site Prep & Extra Expenses
                 <span className="collapse-icon">{isSitePrepExpanded ? '−' : '+'}</span>
               </h2>
               {!isSitePrepExpanded && (
@@ -500,7 +500,7 @@ function App() {
                   />
                 </div>
                 <div className="total-line">
-                  <span>Total Site Prep and Extra Expenses:</span>
+                  <span>Total Site Prep & Extra Expenses:</span>
                   <strong>{formatCurrency(derived.sitePrepAndExtrasTotal)}</strong>
                 </div>
               </>
