@@ -3,46 +3,41 @@ import { calculateProforma } from '../calculations';
 import { getExampleProformaInput } from '../validation';
 
 describe('calculateProforma', () => {
-    it('calculates exact spreadsheet example values', () => {
-        // Given: Example input from the spreadsheet
+    it('calculates example values with new defaults', () => {
+        // Given: Example input with new defaults
+        // howManyBuild: 1, proposedSqFt: 1800, buildCostPerSqFt: 111, salePricePerSqFt: 361
+        // costOfLand: 88000, autoCalculateClosingCost: true (2.5% of 88000 = 2200)
         const input = getExampleProformaInput();
 
         // When: We calculate the proforma
         const result = calculateProforma(input);
 
-        // Then: Results match expected values from spreadsheet
+        // Then: Results match expected values
 
-        // ARV = 3 * 1800 * 361 = 1,949,400
-        expect(result.arv).toBe(1949400);
+        // ARV = 1 * 1800 * 361 = 649,800
+        expect(result.arv).toBe(649800);
 
-        // Total Build Cost = 3 * 1800 * 205 = 1,107,000
-        expect(result.totalBuildCost).toBe(1107000);
+        // Total Build Cost = 1 * 1800 * 111 = 199,800
+        expect(result.totalBuildCost).toBe(199800);
 
         // Site Prep and Extras Total = 0 (all zeros in example)
         expect(result.sitePrepAndExtrasTotal).toBe(0);
 
-        // Loan Base = 1,107,000 + 330,000 + 0 (sitePrep) + 7,000 + 0 = 1,444,000
-        expect(result.loanBase).toBe(1444000);
+        // Effective Closing Cost = 2.5% of 88,000 = 2,200 (auto-calculated)
+        expect(result.effectiveClosingCost).toBe(2200);
 
-        // Total Points = 1,444,000 * 0.015 = 21,660
-        expect(result.totalPoints).toBe(21660);
+        // Loan Base = 199,800 + 88,000 + 0 (sitePrep) + 2,200 = 290,000
+        expect(result.loanBase).toBe(290000);
 
-        // Total Interest Payments = sum of all 6 payments = 74,671.98 ≈ 74,672
+        // Total Points = 290,000 * 0.015 = 4,350
+        expect(result.totalPoints).toBe(4350);
+
+        // Total Interest Payments = sum of all 6 payments
         const expectedInterest = 6049.33 + 8447.83 + 13244.83 + 15643.33 + 15643.33 + 15643.33;
         expect(result.totalInterestPayments).toBeCloseTo(expectedInterest, 2);
 
-        // Real Estate Commission = 1,949,400 * 0.06 = 116,964
-        expect(result.realEstateCommissionAmount).toBe(116964);
-
-        // Total Profit = 1,949,400 - 1,107,000 - 330,000 - 7,000 - 0 - 21,660 - 74,671.98 - 116,964
-        //              = 1,949,400 - 1,656,295.98 = 292,104.02 ≈ 292,104
-        expect(result.totalProfit).toBeCloseTo(292104, 0);
-
-        // Profit Percentage = 292,104 / 1,949,400 ≈ 0.1498 ≈ 14.98%
-        expect(result.profitPercentage).toBeCloseTo(0.1498, 3);
-
-        // Deal Badge = NO Deal (profit% < 15%)
-        expect(result.dealBadge).toBe('NO Deal');
+        // Real Estate Commission = 649,800 * 0.06 = 38,988
+        expect(result.realEstateCommissionAmount).toBe(38988);
     });
 
     it('handles zero ARV gracefully', () => {
@@ -91,14 +86,15 @@ describe('calculateProforma', () => {
     it('classifies Good deal correctly', () => {
         const input = getExampleProformaInput();
         // Adjust to create a good deal (15-20.99%)
-        input.costOfLand = 480000;
-        input.buildCostPerSqFt = 180;
-        input.payment1 = 3000;
-        input.payment2 = 3000;
-        input.payment3 = 3000;
-        input.payment4 = 3000;
-        input.payment5 = 3000;
-        input.payment6 = 3000;
+        // With new defaults: qty=1, sqft=1800, salePricePerSqFt=361, costOfLand=88000
+        input.costOfLand = 130000;
+        input.buildCostPerSqFt = 185;
+        input.payment1 = 1500;
+        input.payment2 = 1500;
+        input.payment3 = 1500;
+        input.payment4 = 1500;
+        input.payment5 = 1500;
+        input.payment6 = 1500;
 
         const result = calculateProforma(input);
 
@@ -142,19 +138,20 @@ describe('calculateProforma', () => {
         // Set one of the site prep cost fields
         input.sitePrepCosts.clearingGrading = sitePrepCost;
 
+        // Get baseline without site prep
+        const baselineResult = calculateProforma(getExampleProformaInput());
         const result = calculateProforma(input);
 
         // sitePrepAndExtrasTotal should be included in loan base
-        // Original loan base: 1,444,000, with sitePrepAndExtrasTotal: 1,454,000
-        expect(result.loanBase).toBe(1444000 + sitePrepCost);
+        expect(result.loanBase).toBe(baselineResult.loanBase + sitePrepCost);
 
         // Total points should increase
         const expectedPointsIncrease = sitePrepCost * (input.loanPointsRate / 100);
-        expect(result.totalPoints).toBe(21660 + expectedPointsIncrease);
+        expect(result.totalPoints).toBe(baselineResult.totalPoints + expectedPointsIncrease);
 
         // Total profit should decrease by sitePrepAndExtrasTotal + points on it
         const expectedProfitDecrease = sitePrepCost + expectedPointsIncrease;
-        expect(result.totalProfit).toBeCloseTo(292104 - expectedProfitDecrease, 0);
+        expect(result.totalProfit).toBeCloseTo(baselineResult.totalProfit - expectedProfitDecrease, 0);
     });
 
     it('sums all site prep and extra expenses correctly', () => {

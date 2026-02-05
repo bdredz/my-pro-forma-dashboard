@@ -136,19 +136,19 @@ export function getExampleProformaInput(): ProformaInput {
         expectedSalePrice: 0,
 
         // Variables
-        howManyBuild: 3,
+        howManyBuild: 1,
         proposedSqFt: 1800,
-        buildCostPerSqFt: 205.00,
+        buildCostPerSqFt: 111.00,
         salePricePerSqFt: 361.00,
-        costOfLand: 330000.00,
+        costOfLand: 88000.00,
         sitePrepCosts: getBlankSitePrepCosts(),
-        estimatedClosingCost: 7000.00,
+        estimatedClosingCost: 2200.00, // 2.5% of $88,000
         realEstateCommissionRate: 6.00,
         interestRate: 11.00,
         loanPointsRate: 1.50,
 
-        // Closing cost - example uses manual value
-        autoCalculateClosingCost: false,
+        // Closing cost - auto-calculate by default
+        autoCalculateClosingCost: true,
 
         // Extra expenses (all 0 by default - sewer/water moved to sitePrepCosts)
         sidewalks: 0,
