@@ -10,7 +10,8 @@ describe('urlSharing', () => {
         // Modify some values to ensure we aren't just getting defaults back
         original.howManyBuild = 10;
         original.propertyAddress = 'Testing Way 123';
-        original.sitePrep = 5000;
+        original.sitePrepCosts.clearingGrading = 5000;
+        original.sitePrepCosts.sewerWaterTap = 3000;
 
         const params = serializeProformaToQuery(original);
         const parsed = parseProformaFromQuery(params);
@@ -57,18 +58,46 @@ describe('urlSharing', () => {
     });
 
     it('correctly maps URL keys to Proforma keys', () => {
-
-        // We cast to any because we're testing partial serialization logic implicitly, 
-        // effectively we just want to check the param names.
-        // But serializeProformaToQuery expects full input. 
-        // Let's use the full input and check specific keys.
         const fullInput = getExampleProformaInput();
         fullInput.howManyBuild = 5;
-        fullInput.sitePrep = 1234;
+        fullInput.sitePrepCosts.clearingGrading = 1234;
 
         const params = serializeProformaToQuery(fullInput);
 
         expect(params.get('qty')).toBe('5');
-        expect(params.get('prep')).toBe('1234');
+        expect(params.get('sp_cg')).toBe('1234'); // sitePrepCosts.clearingGrading
+    });
+
+    it('handles legacy sitePrep param for backward compatibility', () => {
+        const params = new URLSearchParams();
+        params.set('prep', '5000'); // Legacy sitePrep param
+
+        const parsed = parseProformaFromQuery(params);
+
+        // Should map to clearingGrading
+        expect(parsed.sitePrepCosts.clearingGrading).toBe(5000);
+    });
+
+    it('handles legacy sewer and water params for backward compatibility', () => {
+        const params = new URLSearchParams();
+        params.set('sew', '2000'); // Legacy sewer param
+        params.set('wat', '3000'); // Legacy water param
+
+        const parsed = parseProformaFromQuery(params);
+
+        // Should combine into sewerWaterTap
+        expect(parsed.sitePrepCosts.sewerWaterTap).toBe(5000);
+    });
+
+    it('only includes non-zero site prep values in URL', () => {
+        const input = getExampleProformaInput();
+        input.sitePrepCosts.surveyAndPermits = 5000;
+        // All others are 0 by default
+
+        const params = serializeProformaToQuery(input);
+
+        expect(params.get('sp_sv')).toBe('5000');
+        expect(params.has('sp_dm')).toBe(false); // Not included when 0
+        expect(params.has('sp_cg')).toBe(false); // Not included when 0
     });
 });

@@ -125,34 +125,47 @@ describe('calculateProforma', () => {
     it('sums extra expenses correctly', () => {
         const input = getExampleProformaInput();
         input.sidewalks = 1000;
-        input.sewer = 2000;
-        input.water = 3000;
+        // Note: sewer and water moved to sitePrepCosts.sewerWaterTap
         input.rePlatt = 4000;
         input.grinderPumps = 5000;
         input.builderFee = 6000;
 
         const result = calculateProforma(input);
 
-        expect(result.extraExpensesTotal).toBe(21000);
+        // Extra expenses now only has 4 fields (sewer/water moved to sitePrepCosts)
+        expect(result.extraExpensesTotal).toBe(16000);
     });
 
-    it('includes sitePrep in calculations', () => {
+    it('includes sitePrepCosts in calculations', () => {
         const input = getExampleProformaInput();
         const sitePrepCost = 10000;
-        input.sitePrep = sitePrepCost;
+        // Set one of the site prep cost fields
+        input.sitePrepCosts.clearingGrading = sitePrepCost;
 
         const result = calculateProforma(input);
 
-        // sitePrep should be included in loan base
-        // Original loan base: 1,444,000, with sitePrep: 1,454,000
+        // sitePrepTotal should be included in loan base
+        // Original loan base: 1,444,000, with sitePrepTotal: 1,454,000
         expect(result.loanBase).toBe(1444000 + sitePrepCost);
 
         // Total points should increase
         const expectedPointsIncrease = sitePrepCost * (input.loanPointsRate / 100);
         expect(result.totalPoints).toBe(21660 + expectedPointsIncrease);
 
-        // Total profit should decrease by sitePrep + points on sitePrep
+        // Total profit should decrease by sitePrepTotal + points on sitePrepTotal
         const expectedProfitDecrease = sitePrepCost + expectedPointsIncrease;
         expect(result.totalProfit).toBeCloseTo(292104 - expectedProfitDecrease, 0);
+    });
+
+    it('sums all site prep costs correctly', () => {
+        const input = getExampleProformaInput();
+        input.sitePrepCosts.surveyAndPermits = 1000;
+        input.sitePrepCosts.houseDemolitionDebris = 2000;
+        input.sitePrepCosts.clearingGrading = 3000;
+        input.sitePrepCosts.sewerWaterTap = 4000;
+
+        const result = calculateProforma(input);
+
+        expect(result.sitePrepTotal).toBe(10000);
     });
 });

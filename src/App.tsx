@@ -1,10 +1,11 @@
 import { useState, useMemo } from 'react';
-import type { ProformaInput } from './domain/proforma';
+import type { ProformaInput, SitePrepCosts } from './domain/proforma';
 import {
   calculateProforma,
   getExampleProformaInput,
   getBlankProformaInput,
   autoFillInterestPayments,
+  calculateAutoClosingCost,
 } from './domain/proforma';
 import { generateShareUrl, parseProformaFromQuery } from './utils/urlSharing';
 import { formatCurrency, formatPercent } from './utils/formatting';
@@ -25,6 +26,7 @@ function App() {
   });
 
   const [showToast, setShowToast] = useState(false);
+  const [isSitePrepExpanded, setIsSitePrepExpanded] = useState(false);
 
   // Calculate derived values
   const derived = useMemo(() => calculateProforma(input), [input]);
@@ -32,6 +34,14 @@ function App() {
   // Helper to update a single field
   const updateField = <K extends keyof ProformaInput>(field: K, value: ProformaInput[K]) => {
     setInput((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // Helper to update a nested site prep field
+  const updateSitePrepField = <K extends keyof SitePrepCosts>(field: K, value: number) => {
+    setInput((prev) => ({
+      ...prev,
+      sitePrepCosts: { ...prev.sitePrepCosts, [field]: value },
+    }));
   };
 
   // Reset to example defaults
@@ -196,13 +206,65 @@ function App() {
                 type="currency"
                 required
               />
-              <NumberField
-                label="Sale Price per Sq Ft"
-                value={input.salePricePerSqFt}
-                onChange={(v) => updateField('salePricePerSqFt', v)}
-                type="currency"
-                required
-              />
+              <div className="pricing-mode-section">
+                <div className="pricing-toggle">
+                  <label className="toggle-label">
+                    <input
+                      type="checkbox"
+                      checked={input.pricingMode === 'totalPrice'}
+                      onChange={(e) => {
+                        const newMode = e.target.checked ? 'totalPrice' : 'perSqFt';
+                        if (newMode === 'totalPrice' && input.pricingMode === 'perSqFt') {
+                          // Switching TO totalPrice - calculate expected sale price from current
+                          const currentArv = input.howManyBuild * input.proposedSqFt * input.salePricePerSqFt;
+                          setInput((prev) => ({
+                            ...prev,
+                            pricingMode: newMode,
+                            expectedSalePrice: currentArv,
+                          }));
+                        } else if (newMode === 'perSqFt' && input.pricingMode === 'totalPrice') {
+                          // Switching TO perSqFt - calculate price per sqft from expected
+                          const totalSqFt = input.howManyBuild * input.proposedSqFt;
+                          const pricePerSqFt = totalSqFt > 0 ? input.expectedSalePrice / totalSqFt : 0;
+                          setInput((prev) => ({
+                            ...prev,
+                            pricingMode: newMode,
+                            salePricePerSqFt: pricePerSqFt,
+                          }));
+                        }
+                      }}
+                    />
+                    <span className="toggle-slider"></span>
+                  </label>
+                  <span className="toggle-text">
+                    {input.pricingMode === 'perSqFt' ? 'Price per Sq Ft' : 'Total Sale Price'}
+                  </span>
+                </div>
+                {input.pricingMode === 'perSqFt' ? (
+                  <NumberField
+                    label="Sale Price per Sq Ft"
+                    value={input.salePricePerSqFt}
+                    onChange={(v) => updateField('salePricePerSqFt', v)}
+                    type="currency"
+                    required
+                  />
+                ) : (
+                  <NumberField
+                    label="Expected Sale Price"
+                    value={input.expectedSalePrice}
+                    onChange={(v) => updateField('expectedSalePrice', v)}
+                    type="currency"
+                    required
+                  />
+                )}
+                <div className="derived-value">
+                  {input.pricingMode === 'perSqFt' ? (
+                    <span>ARV: {formatCurrency(derived.arv)}</span>
+                  ) : (
+                    <span>Price/Sq Ft: {formatCurrency(derived.effectiveSalePricePerSqFt)}</span>
+                  )}
+                </div>
+              </div>
               <NumberField
                 label="Cost of Land"
                 value={input.costOfLand}
@@ -210,18 +272,44 @@ function App() {
                 type="currency"
                 required
               />
-              <NumberField
-                label="Site Prep"
-                value={input.sitePrep}
-                onChange={(v) => updateField('sitePrep', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Estimated Closing Cost"
-                value={input.estimatedClosingCost}
-                onChange={(v) => updateField('estimatedClosingCost', v)}
-                type="currency"
-              />
+              <div className="auto-calc-field">
+                <div className="auto-calc-header">
+                  <label className="number-field-label">Estimated Closing Cost</label>
+                  <label className="checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={input.autoCalculateClosingCost}
+                      onChange={(e) => {
+                        const isAuto = e.target.checked;
+                        if (isAuto) {
+                          updateField('autoCalculateClosingCost', true);
+                        } else {
+                          // Preserve calculated value as starting point
+                          const currentCalc = calculateAutoClosingCost(input.costOfLand);
+                          setInput((prev) => ({
+                            ...prev,
+                            autoCalculateClosingCost: false,
+                            estimatedClosingCost: currentCalc,
+                          }));
+                        }
+                      }}
+                    />
+                    Auto (2.5% of land)
+                  </label>
+                </div>
+                {input.autoCalculateClosingCost ? (
+                  <div className="auto-calc-display">
+                    {formatCurrency(calculateAutoClosingCost(input.costOfLand))}
+                  </div>
+                ) : (
+                  <NumberField
+                    label=""
+                    value={input.estimatedClosingCost}
+                    onChange={(v) => updateField('estimatedClosingCost', v)}
+                    type="currency"
+                  />
+                )}
+              </div>
               <NumberField
                 label="Real Estate Commission %"
                 value={input.realEstateCommissionRate}
@@ -244,6 +332,100 @@ function App() {
                 max={100}
               />
             </div>
+          </section>
+
+          {/* Site Prep Section - Collapsible */}
+          <section className="card">
+            <div
+              className="section-header collapsible-header"
+              onClick={() => setIsSitePrepExpanded(!isSitePrepExpanded)}
+            >
+              <h2>
+                Site Prep
+                <span className="collapse-icon">{isSitePrepExpanded ? '−' : '+'}</span>
+              </h2>
+              {!isSitePrepExpanded && (
+                <span className="collapsed-total">
+                  Total: {formatCurrency(derived.sitePrepTotal)}
+                </span>
+              )}
+            </div>
+            {isSitePrepExpanded && (
+              <>
+                <div className="form-grid">
+                  <NumberField
+                    label="Survey & Permits"
+                    value={input.sitePrepCosts.surveyAndPermits}
+                    onChange={(v) => updateSitePrepField('surveyAndPermits', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="House Demolition & Debris"
+                    value={input.sitePrepCosts.houseDemolitionDebris}
+                    onChange={(v) => updateSitePrepField('houseDemolitionDebris', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Tree Removal & Fill Dirt"
+                    value={input.sitePrepCosts.treeRemovalFillDirt}
+                    onChange={(v) => updateSitePrepField('treeRemovalFillDirt', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Clearing & Grading"
+                    value={input.sitePrepCosts.clearingGrading}
+                    onChange={(v) => updateSitePrepField('clearingGrading', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Culvert / Drainage Pipe"
+                    value={input.sitePrepCosts.culvertDrainagePipe}
+                    onChange={(v) => updateSitePrepField('culvertDrainagePipe', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Pad Prep"
+                    value={input.sitePrepCosts.padPrep}
+                    onChange={(v) => updateSitePrepField('padPrep', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Gravel / Cement"
+                    value={input.sitePrepCosts.gravelCement}
+                    onChange={(v) => updateSitePrepField('gravelCement', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Gas / Electric Tap"
+                    value={input.sitePrepCosts.gasElectricTap}
+                    onChange={(v) => updateSitePrepField('gasElectricTap', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Sewer / Water Tap"
+                    value={input.sitePrepCosts.sewerWaterTap}
+                    onChange={(v) => updateSitePrepField('sewerWaterTap', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Septic"
+                    value={input.sitePrepCosts.septic}
+                    onChange={(v) => updateSitePrepField('septic', v)}
+                    type="currency"
+                  />
+                  <NumberField
+                    label="Retaining Wall"
+                    value={input.sitePrepCosts.retainingWall}
+                    onChange={(v) => updateSitePrepField('retainingWall', v)}
+                    type="currency"
+                  />
+                </div>
+                <div className="total-line">
+                  <span>Site Prep Total:</span>
+                  <strong>{formatCurrency(derived.sitePrepTotal)}</strong>
+                </div>
+              </>
+            )}
           </section>
 
           <section className="card">
@@ -304,18 +486,6 @@ function App() {
                 label="Sidewalks"
                 value={input.sidewalks}
                 onChange={(v) => updateField('sidewalks', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Sewer"
-                value={input.sewer}
-                onChange={(v) => updateField('sewer', v)}
-                type="currency"
-              />
-              <NumberField
-                label="Water"
-                value={input.water}
-                onChange={(v) => updateField('water', v)}
                 type="currency"
               />
               <NumberField
@@ -394,11 +564,11 @@ function App() {
               </div>
               <div className="breakdown-item">
                 <span>Site Prep</span>
-                <span>{formatCurrency(input.sitePrep)}</span>
+                <span>{formatCurrency(derived.sitePrepTotal)}</span>
               </div>
               <div className="breakdown-item">
                 <span>Closing Cost</span>
-                <span>{formatCurrency(input.estimatedClosingCost)}</span>
+                <span>{formatCurrency(derived.effectiveClosingCost)}</span>
               </div>
               <div className="breakdown-item">
                 <span>Extra Expenses</span>
@@ -422,8 +592,8 @@ function App() {
                   {formatCurrency(
                     derived.totalBuildCost +
                     input.costOfLand +
-                    input.sitePrep +
-                    input.estimatedClosingCost +
+                    derived.sitePrepTotal +
+                    derived.effectiveClosingCost +
                     derived.extraExpensesTotal +
                     derived.totalPoints +
                     derived.totalInterestPayments +

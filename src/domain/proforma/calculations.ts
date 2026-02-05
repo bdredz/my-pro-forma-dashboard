@@ -1,4 +1,58 @@
-import type { ProformaInput, ProformaDerived, ProformaResult } from './types';
+import type { ProformaInput, ProformaDerived, ProformaResult, SitePrepCosts } from './types';
+
+/**
+ * Closing cost rate for auto-calculation (2.5% of land cost)
+ */
+export const CLOSING_COST_RATE = 0.025;
+
+/**
+ * Calculate the auto closing cost based on land cost
+ */
+export function calculateAutoClosingCost(costOfLand: number): number {
+    return costOfLand * CLOSING_COST_RATE;
+}
+
+/**
+ * Get effective closing cost based on auto-calculate toggle
+ */
+export function getEffectiveClosingCost(input: ProformaInput): number {
+    if (input.autoCalculateClosingCost) {
+        return calculateAutoClosingCost(input.costOfLand);
+    }
+    return input.estimatedClosingCost;
+}
+
+/**
+ * Calculate total site prep costs from breakdown
+ */
+export function calculateSitePrepTotal(sitePrepCosts: SitePrepCosts): number {
+    return (
+        sitePrepCosts.surveyAndPermits +
+        sitePrepCosts.houseDemolitionDebris +
+        sitePrepCosts.treeRemovalFillDirt +
+        sitePrepCosts.clearingGrading +
+        sitePrepCosts.culvertDrainagePipe +
+        sitePrepCosts.padPrep +
+        sitePrepCosts.gravelCement +
+        sitePrepCosts.gasElectricTap +
+        sitePrepCosts.sewerWaterTap +
+        sitePrepCosts.septic +
+        sitePrepCosts.retainingWall
+    );
+}
+
+/**
+ * Get effective sale price per sq ft based on pricing mode
+ * Mode 'perSqFt': use input.salePricePerSqFt directly
+ * Mode 'totalPrice': calculate from expectedSalePrice / (qty * sqft)
+ */
+export function getEffectiveSalePricePerSqFt(input: ProformaInput): number {
+    if (input.pricingMode === 'totalPrice') {
+        const totalSqFt = input.howManyBuild * input.proposedSqFt;
+        return totalSqFt === 0 ? 0 : input.expectedSalePrice / totalSqFt;
+    }
+    return input.salePricePerSqFt;
+}
 
 /**
  * Pure calculation engine for proforma analysis
@@ -13,27 +67,34 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     const commissionRateDecimal = input.realEstateCommissionRate / 100;
     const loanPointsRateDecimal = input.loanPointsRate / 100;
 
-    // Calculate extra expenses total
+    // Calculate site prep total from breakdown
+    const sitePrepTotal = calculateSitePrepTotal(input.sitePrepCosts);
+
+    // Calculate extra expenses total (sewer/water moved to sitePrepCosts)
     const extraExpensesTotal =
         input.sidewalks +
-        input.sewer +
-        input.water +
         input.rePlatt +
         input.grinderPumps +
         input.builderFee;
 
+    // Get effective sale price per sq ft based on pricing mode
+    const effectiveSalePricePerSqFt = getEffectiveSalePricePerSqFt(input);
+
     // Calculate ARV (After Repair Value)
-    const arv = qty * input.proposedSqFt * input.salePricePerSqFt;
+    const arv = qty * input.proposedSqFt * effectiveSalePricePerSqFt;
 
     // Calculate total build cost
     const totalBuildCost = qty * input.proposedSqFt * input.buildCostPerSqFt;
 
-    // Calculate loan base (for points calculation) - includes sitePrep
+    // Get effective closing cost (auto-calculated or manual)
+    const effectiveClosingCost = getEffectiveClosingCost(input);
+
+    // Calculate loan base (for points calculation) - includes sitePrepTotal
     const loanBase =
         totalBuildCost +
         input.costOfLand +
-        input.sitePrep +
-        input.estimatedClosingCost +
+        sitePrepTotal +
+        effectiveClosingCost +
         extraExpensesTotal;
 
     // Calculate total points
@@ -51,13 +112,13 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     // Calculate real estate commission
     const realEstateCommissionAmount = arv * commissionRateDecimal;
 
-    // Calculate total profit - includes sitePrep as a cost
+    // Calculate total profit - includes sitePrepTotal as a cost
     const totalProfit =
         arv -
         totalBuildCost -
         input.costOfLand -
-        input.sitePrep - // Added sitePrep here
-        input.estimatedClosingCost -
+        sitePrepTotal -
+        effectiveClosingCost -
         extraExpensesTotal -
         totalPoints -
         totalInterestPayments -
@@ -79,9 +140,12 @@ export function calculateProforma(input: ProformaInput): ProformaDerived {
     }
 
     return {
+        effectiveSalePricePerSqFt,
         arv,
         totalBuildCost,
+        sitePrepTotal,
         extraExpensesTotal,
+        effectiveClosingCost,
         loanBase,
         totalPoints,
         totalInterestPayments,
@@ -117,11 +181,12 @@ export function autoFillInterestPayments(
     const qty = input.howManyBuild;
     const estimatedBuildCost = qty * input.proposedSqFt * input.buildCostPerSqFt;
 
-    // Calculate extra expenses total for the estimate
+    // Calculate site prep total for the estimate
+    const sitePrepTotal = calculateSitePrepTotal(input.sitePrepCosts);
+
+    // Calculate extra expenses total for the estimate (sewer/water moved to sitePrepCosts)
     const extraExpensesTotal =
         input.sidewalks +
-        input.sewer +
-        input.water +
         input.rePlatt +
         input.grinderPumps +
         input.builderFee;
@@ -129,7 +194,7 @@ export function autoFillInterestPayments(
     const estimatedLoanBase =
         estimatedBuildCost +
         input.costOfLand +
-        input.sitePrep +
+        sitePrepTotal +
         input.estimatedClosingCost +
         extraExpensesTotal;
 
